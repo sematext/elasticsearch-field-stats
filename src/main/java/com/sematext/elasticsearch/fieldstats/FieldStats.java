@@ -1,23 +1,18 @@
 /*
- * Licensed to Elasticsearch under one or more contributor
- * license agreements. See the NOTICE file distributed with
- * this work for additional information regarding copyright
- * ownership. Elasticsearch licenses this file to you under
- * the Apache License, Version 2.0 (the "License"); you may
- * not use this file except in compliance with the License.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *    http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing,
- * software distributed under the License is distributed on an
- * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
- * specific language governing permissions and limitations
- * under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
-
 package com.sematext.elasticsearch.fieldstats;
+
 
 import org.apache.lucene.document.InetAddressPoint;
 import org.apache.lucene.index.TermsEnum;
@@ -239,13 +234,17 @@ public abstract class FieldStats<T> implements Writeable, ToXContent {
      * @param optionalFormat A string describing how to parse the specified value. Whether this parameter is supported
      *                       depends on the implementation. If optionalFormat is specified and the implementation
      *                       doesn't support it an {@link UnsupportedOperationException} is thrown
+     * @return value
      */
     protected abstract T valueOf(String value, String optionalFormat);
 
     /**
      * Accumulates the provided stats into this stats instance.
+     *
+     * @param other second field stats object to accumulate
      */
-    public final void accumulate(FieldStats other) {
+    @SuppressWarnings("unchecked")
+    public final void accumulate(FieldStats<?> other) {
         this.maxDoc += other.maxDoc;
         if (other.docCount == -1) {
             this.docCount = -1;
@@ -332,6 +331,8 @@ public abstract class FieldStats<T> implements Writeable, ToXContent {
     protected abstract void writeMinMax(StreamOutput out) throws IOException;
 
     /**
+     * @param constraint Index constraints
+     *
      * @return <code>true</code> if this instance matches with the provided index constraint,
      * otherwise <code>false</code> is returned
      */
@@ -517,11 +518,17 @@ public abstract class FieldStats<T> implements Writeable, ToXContent {
 
         @Override
         public String getMinValueAsString() {
+            if(formatter == null) {
+                return minValue.toString();
+            }
             return formatter.printer().print(minValue);
         }
 
         @Override
         public String getMaxValueAsString() {
+            if(formatter == null) {
+                return maxValue.toString();
+            }
             return formatter.printer().print(maxValue);
         }
 
@@ -650,7 +657,8 @@ public abstract class FieldStats<T> implements Writeable, ToXContent {
 
         public GeoPoint(long maxDoc, long docCount, long sumDocFreq, long sumTotalTermFreq,
                         boolean isSearchable, boolean isAggregatable,
-                        org.elasticsearch.common.geo.GeoPoint minValue, org.elasticsearch.common.geo.GeoPoint maxValue) {
+                        org.elasticsearch.common.geo.GeoPoint minValue,
+                        org.elasticsearch.common.geo.GeoPoint maxValue) {
             super((byte) 5, maxDoc, docCount, sumDocFreq, sumTotalTermFreq, isSearchable, isAggregatable,
                 minValue, maxValue);
         }
@@ -661,7 +669,8 @@ public abstract class FieldStats<T> implements Writeable, ToXContent {
         }
 
         @Override
-        protected void updateMinMax(org.elasticsearch.common.geo.GeoPoint min, org.elasticsearch.common.geo.GeoPoint max) {
+        protected void updateMinMax(org.elasticsearch.common.geo.GeoPoint min,
+                                    org.elasticsearch.common.geo.GeoPoint max) {
             minValue.reset(Math.min(min.lat(), minValue.lat()), Math.min(min.lon(), minValue.lon()));
             maxValue.reset(Math.max(max.lat(), maxValue.lat()), Math.max(max.lon(), maxValue.lon()));
         }
@@ -690,7 +699,7 @@ public abstract class FieldStats<T> implements Writeable, ToXContent {
         }
     }
 
-    public static FieldStats readFrom(StreamInput in) throws IOException {
+    public static FieldStats<?> readFrom(StreamInput in) throws IOException {
         byte type = in.readByte();
         long maxDoc = in.readLong();
         long docCount = in.readLong();
@@ -755,8 +764,10 @@ public abstract class FieldStats<T> implements Writeable, ToXContent {
                     return new GeoPoint(maxDoc, docCount, sumDocFreq, sumTotalTermFreq,
                         isSearchable, isAggregatable);
                 }
-                org.elasticsearch.common.geo.GeoPoint min = new org.elasticsearch.common.geo.GeoPoint(in.readDouble(), in.readDouble());
-                org.elasticsearch.common.geo.GeoPoint max = new org.elasticsearch.common.geo.GeoPoint(in.readDouble(), in.readDouble());
+                org.elasticsearch.common.geo.GeoPoint min =
+                    new org.elasticsearch.common.geo.GeoPoint(in.readDouble(), in.readDouble());
+                org.elasticsearch.common.geo.GeoPoint max =
+                    new org.elasticsearch.common.geo.GeoPoint(in.readDouble(), in.readDouble());
                 return new GeoPoint(maxDoc, docCount, sumDocFreq, sumTotalTermFreq,
                     isSearchable, isAggregatable, min, max);
             }

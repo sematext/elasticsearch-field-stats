@@ -1,3 +1,16 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.sematext.elasticsearch.fieldstats;
 
 import static com.sematext.elasticsearch.fieldstats.IndexConstraint.Comparison.GT;
@@ -96,7 +109,7 @@ public class FieldStatsTests extends ESSingleNodeTestCase {
 
     assertEquals(4, result.getAllFieldStats().size());
     for (String field : new String[] {"field_index", "field_dv", "field_stored"}) {
-      FieldStats stats = result.getAllFieldStats().get(field);
+      FieldStats<?> stats = result.getAllFieldStats().get(field);
       assertEquals(stats.getMaxDoc(), 11L);
       assertEquals(stats.getDisplayType(),
           "string");
@@ -121,7 +134,7 @@ public class FieldStatsTests extends ESSingleNodeTestCase {
   }
 
   public void testDouble() {
-    createIndex("test", Settings.EMPTY, "test",
+    createIndex("test", Settings.builder().put("index.number_of_shards", 4).build(), "test",
         "field_index", makeType("double", true, false, false),
         "field_dv", makeType("double", false, true, false),
         "field_stored", makeType("double", false, true, true),
@@ -134,7 +147,7 @@ public class FieldStatsTests extends ESSingleNodeTestCase {
     FieldStatsResponse result = prepareFieldStats()
         .setFields("field_index", "field_dv", "field_stored", "field_source").get();
     for (String field : new String[] {"field_index", "field_dv", "field_stored"}) {
-      FieldStats stats = result.getAllFieldStats().get(field);
+      FieldStats<?> stats = result.getAllFieldStats().get(field);
       assertEquals(stats.getMaxDoc(), 11L);
       assertEquals(stats.getDisplayType(), "float");
       if ("field_index".equals(field)) {
@@ -167,7 +180,7 @@ public class FieldStatsTests extends ESSingleNodeTestCase {
     FieldStatsResponse result = prepareFieldStats()
         .setFields("field_index", "field_dv", "field_stored", "field_source").get();
     for (String field : new String[] {"field_index", "field_dv", "field_stored"}) {
-      FieldStats stats = result.getAllFieldStats().get(field);
+      FieldStats<?> stats = result.getAllFieldStats().get(field);
       assertEquals(stats.getMaxDoc(), 11L);
       assertEquals(stats.getDisplayType(), "float");
       if (field.equals("field_index")) {
@@ -202,7 +215,7 @@ public class FieldStatsTests extends ESSingleNodeTestCase {
     FieldStatsResponse result = prepareFieldStats()
         .setFields("field_index", "field_dv", "field_stored", "field_source").get();
     for (String field : new String[]{"field_index", "field_dv", "field_stored"}) {
-      FieldStats stats = result.getAllFieldStats().get(field);
+      FieldStats<?> stats = result.getAllFieldStats().get(field);
       assertEquals(stats.getMaxDoc(), 11L);
       assertEquals(stats.getDisplayType(), "float");
       if (field.equals("field_index")) {
@@ -259,14 +272,14 @@ public class FieldStatsTests extends ESSingleNodeTestCase {
   }
 
   public void testMerge() {
-    List<FieldStats> stats = new ArrayList<>();
+    List<FieldStats<?>> stats = new ArrayList<>();
     stats.add(new FieldStats.Long(1, 1L, 1L, 1L, true, false, 1L, 1L));
     stats.add(new FieldStats.Long(1, 1L, 1L, 1L, true, false, 1L, 1L));
     stats.add(new FieldStats.Long(1, 1L, 1L, 1L, true, false, 1L, 1L));
     stats.add(new FieldStats.Long(0, 0, 0, 0, false, false));
 
-    FieldStats stat = new FieldStats.Long(1, 1L, 1L, 1L, true, false, 1L, 1L);
-    for (FieldStats otherStat : stats) {
+    FieldStats<?> stat = new FieldStats.Long(1, 1L, 1L, 1L, true, false, 1L, 1L);
+    for (FieldStats<?> otherStat : stats) {
       stat.accumulate(otherStat);
     }
     assertEquals(stat.getMaxDoc(), 4L);
@@ -547,6 +560,20 @@ public class FieldStatsTests extends ESSingleNodeTestCase {
         .setFields("*")
         .setLevel("indices")
         .get();
+    assertEquals(response.getSuccessfulShards(), response.getTotalShards());
+    assertEquals(0, response.getFailedShards());
+    assertEquals(response.getIndicesMergedFieldStats().size(), 1);
+  }
+
+
+  public void testEmptyIndexNotExistingField() {
+    createIndex("test1", Settings.EMPTY, "type", "value", "type=date");
+    FieldStatsResponse response = prepareFieldStats()
+        .setFields("foobar")
+        .setLevel("indices")
+        .get();
+    assertEquals(response.getSuccessfulShards(), response.getTotalShards());
+    assertEquals(0, response.getFailedShards());
     assertEquals(response.getIndicesMergedFieldStats().size(), 1);
   }
 
@@ -572,7 +599,7 @@ public class FieldStatsTests extends ESSingleNodeTestCase {
   /**
    * creates a random field stats which does not guarantee that {@link FieldStats#maxValue} is greater than {@link FieldStats#minValue}
    **/
-  public static FieldStats randomFieldStats() throws UnknownHostException {
+  public static FieldStats<?> randomFieldStats() throws UnknownHostException {
     int type = randomInt(5);
     switch (type) {
       case 0:
@@ -645,16 +672,16 @@ public class FieldStatsTests extends ESSingleNodeTestCase {
 
     client().admin().indices().prepareRefresh().get();
     FieldStatsResponse result = prepareFieldStats().setFields("field_index").get();
-    FieldStats stats = result.getAllFieldStats().get("field_index");
+    FieldStats<?> stats = result.getAllFieldStats().get("field_index");
     assertEquals(stats.getDisplayType(), "geo_point");
   }
 
-  private void assertSerialization(FieldStats stats) throws IOException {
+  private void assertSerialization(FieldStats<?> stats) throws IOException {
     BytesStreamOutput output = new BytesStreamOutput();
     stats.writeTo(output);
     output.flush();
     StreamInput input = output.bytes().streamInput();
-    FieldStats deserializedStats = FieldStats.readFrom(input);
+    FieldStats<?> deserializedStats = FieldStats.readFrom(input);
     assertEquals(stats, deserializedStats);
     assertEquals(stats.hashCode(), deserializedStats.hashCode());
   }

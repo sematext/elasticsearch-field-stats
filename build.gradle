@@ -1,81 +1,33 @@
-apply plugin: 'java'
-apply plugin: 'maven'
-
 apply from: 'gradle/ext.gradle'
 apply from: 'gradle/publish.gradle'
 
-repositories {
-    mavenCentral()
-}
-
-configurations {
-    distJars {
-        extendsFrom runtime
-        exclude group: 'org.elasticsearch'
-        exclude module: 'lucene-core'
-        exclude module: 'lucene-analyzers-common'
-        exclude module: 'jackson-core'
-        exclude module: 'jackson-dataformat-smile'
-        exclude module: 'jackson-dataformat-yaml'
+buildscript {
+    repositories {
+        mavenCentral()
+        maven {
+            name 'sonatype-snapshots'
+            url "https://oss.sonatype.org/content/repositories/snapshots/"
+        }
+        jcenter()
+    }
+    dependencies {
+        classpath "org.elasticsearch.gradle:build-tools:${project.property('elasticsearch.version')}"
     }
 }
 
-dependencies {
-    compile "org.elasticsearch:elasticsearch:${project.property('elasticsearch.version')}"
-    compile "org.apache.lucene:lucene-core:${project.property('lucene.version')}"
-    compileOnly "org.apache.logging.log4j:log4j-core:${project.property('log4j.version')}"
-    testCompile("junit:junit:${project.property('junit.version')}") {
-        exclude(module: 'hamcrest-core')
-        exclude(module: 'mockito-core')
-    }
-    testCompile "org.apache.logging.log4j:log4j-core:${project.property('log4j.version')}"
-    testCompile "org.apache.lucene:lucene-test-framework:${project.property('lucene.version')}"
-    testCompile "org.elasticsearch.test:framework:${project.property('elasticsearch.version')}"
-    testCompile "org.elasticsearch.plugin:transport-netty4-client:${project.property('elasticsearch.version')}"
-    distJars "${project.group}:${project.name}:${project.version}"
-}
+apply plugin: 'java'
+apply plugin: 'maven'
+apply plugin: 'idea'
+apply plugin: 'elasticsearch.esplugin'
 
 sourceCompatibility = JavaVersion.VERSION_1_8
 targetCompatibility = JavaVersion.VERSION_1_8
 
-[compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 
-
-test {
-    systemProperties['path.home'] = System.getProperty("user.dir")
-    testLogging {
-        showStandardStreams = false
-        exceptionFormat = 'full'
-    }
-}
-
-task makePluginDescriptor(type: Copy) {
-    from 'src/main/templates'
-    into 'build/tmp/plugin'
-    expand([
-        'descriptor': [
-            'name': pluginName,
-            'classname': pluginClassname,
-            'description': pluginDescription,
-            'version': project.property('version'),
-            'javaVersion': project.property('targetCompatibility'),
-            'elasticsearchVersion' : project.property('elasticsearch.version')
-        ]
-    ])
-}
-
-task buildPluginZip(type: Zip, dependsOn: [':jar', ':makePluginDescriptor']) {
-    from configurations.distJars
-    from 'build/tmp/plugin'
-    into 'elasticsearch'
-    classifier = 'plugin'
-}
-
-task unpackPlugin(type: Copy, dependsOn: [':buildPluginZip']) {
-    delete "plugins"
-    from configurations.distJars
-    from 'build/tmp/plugin'
-    into "plugins/${pluginName}"
+esplugin {
+    name 'field-stats'
+    description 'Field stats plugin for Elasticsearch'
+    classname 'com.sematext.elasticsearch.plugin.FieldStatsPlugin'
 }
 
 clean {
@@ -84,21 +36,13 @@ clean {
     delete "logs"
 }
 
-task javadocJar(type: Jar, dependsOn: classes) {
-    from javadoc
-    classifier 'javadoc'
+integTestCluster {
+    numNodes = 2
 }
 
-task sourcesJar(type: Jar, dependsOn: classes) {
-    from sourceSets.main.allSource
-    classifier 'sources'
-}
+checkstyleTest.enabled = false
+dependencyLicenses.enabled = false
+thirdPartyAudit.enabled = false
+licenseFile = rootProject.file('./LICENSE')
+noticeFile = rootProject.file('README.md')
 
-artifacts {
-    archives javadocJar, sourcesJar, buildPluginZip
-}
-
-
-test {
-    jvmArgs '-Dtests.security.manager=false'
-}

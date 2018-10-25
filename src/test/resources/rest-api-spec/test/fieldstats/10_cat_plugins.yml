@@ -1,0 +1,7 @@
+"Test that field stats plugin is loaded in Elasticsearch":
+  - do:
+      cat.plugins:
+        local: true
+        h: component
+  - match:
+      $body: /field-stats\n$/

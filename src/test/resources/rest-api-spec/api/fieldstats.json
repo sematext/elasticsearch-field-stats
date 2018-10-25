@@ -1,0 +1,48 @@
+{
+  "fieldstats": {
+    "methods": ["GET", "POST"],
+    "url": {
+      "path": "/_field_stats",
+      "paths": ["/_field_stats"],
+      "parts": {},
+      "params": {
+        "fields": {
+          "type": "string",
+          "default": "@timestamp"
+        },
+        "level": {
+          "type": "string",
+          "default": "indices"
+        }
+      }
+    },
+    "body": {
+      "_shards" : {
+        "total" : 123,
+        "successful" : 123,
+        "failed" : 0
+      },
+      "indices" : {
+        "_all" : {
+          "fields" : {
+            "@timestamp" : {
+              "type" : "date",
+              "max_doc" : 123123,
+              "doc_count" : -1,
+              "density" : -1,
+              "sum_doc_freq" : -1,
+              "sum_total_term_freq" : -1,
+              "searchable" : true,
+              "aggregatable" : true,
+              "min_value" : 1041379210390,
+              "min_value_as_string" : "2003-01-01T00:00:10.390Z",
+              "max_value" : 1540861455000,
+              "max_value_as_string" : "2018-10-30T01:04:15.000Z"
+            }
+          }
+        }
+      }
+    }
+
+  }
+}

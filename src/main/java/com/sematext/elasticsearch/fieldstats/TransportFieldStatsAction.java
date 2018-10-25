@@ -1,3 +1,16 @@
+/*
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package com.sematext.elasticsearch.fieldstats;
 
 import org.apache.lucene.document.DoublePoint;
@@ -10,7 +23,6 @@ import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.MultiFields;
 import org.apache.lucene.index.PointValues;
 import org.apache.lucene.index.Terms;
-import org.apache.lucene.util.BytesRef;
 import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.action.support.DefaultShardOperationFailedException;
@@ -21,6 +33,7 @@ import org.elasticsearch.cluster.block.ClusterBlockException;
 import org.elasticsearch.cluster.block.ClusterBlockLevel;
 import org.elasticsearch.cluster.metadata.IndexNameExpressionResolver;
 import org.elasticsearch.cluster.routing.GroupShardsIterator;
+import org.elasticsearch.cluster.routing.ShardIterator;
 import org.elasticsearch.cluster.routing.ShardRouting;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.geo.GeoPoint;
@@ -32,7 +45,6 @@ import org.elasticsearch.index.mapper.DateFieldMapper;
 import org.elasticsearch.index.mapper.DocumentMapper;
 import org.elasticsearch.index.mapper.GeoPointFieldMapper;
 import org.elasticsearch.index.mapper.MappedFieldType;
-import org.elasticsearch.index.mapper.MapperService;
 import org.elasticsearch.index.mapper.NumberFieldMapper;
 import org.elasticsearch.index.shard.IndexShard;
 import org.elasticsearch.index.shard.ShardId;
@@ -44,6 +56,7 @@ import org.elasticsearch.transport.TransportService;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -51,7 +64,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicReferenceArray;
-import java.util.stream.Collectors;
 
 public class TransportFieldStatsAction extends
     TransportBroadcastAction<FieldStatsRequest, FieldStatsResponse, FieldStatsShardRequest, FieldStatsShardResponse> {
@@ -70,12 +82,13 @@ public class TransportFieldStatsAction extends
     }
 
     @Override
+    @SuppressWarnings("rawtypes")
     protected FieldStatsResponse newResponse(FieldStatsRequest request, AtomicReferenceArray shardsResponses,
                                              ClusterState clusterState) {
         int successfulShards = 0;
         int failedShards = 0;
         Map<String, String> conflicts = new HashMap<>();
-        Map<String, Map<String, FieldStats>> indicesMergedFieldStats = new HashMap<>();
+        Map<String, Map<String, FieldStats<?>>> indicesMergedFieldStats = new HashMap<>();
         List<DefaultShardOperationFailedException> shardFailures = new ArrayList<>();
         for (int i = 0; i < shardsResponses.length(); i++) {
             Object shardValue = shardsResponses.get(i);
@@ -100,7 +113,7 @@ public class TransportFieldStatsAction extends
                     throw new IllegalArgumentException("Illegal level option [" + request.level() + "]");
                 }
 
-                Map<String, FieldStats> indexMergedFieldStats = indicesMergedFieldStats.get(indexName);
+                Map<String, FieldStats<?>> indexMergedFieldStats = indicesMergedFieldStats.get(indexName);
                 if (indexMergedFieldStats == null) {
                     indicesMergedFieldStats.put(indexName, indexMergedFieldStats = new HashMap<>());
                 }
@@ -111,8 +124,8 @@ public class TransportFieldStatsAction extends
                     if (existing != null) {
                         if (existing.getType() != entry.getValue().getType()) {
                             if (conflicts.containsKey(entry.getKey()) == false) {
-                                FieldStats[] fields = new FieldStats[] {entry.getValue(), existing};
-                                Arrays.sort(fields, (o1, o2) -> Byte.compare(o1.getType(), o2.getType()));
+                                FieldStats<?>[] fields = new FieldStats<?>[] {entry.getValue(), existing};
+                                Arrays.sort(fields, Comparator.comparingInt(FieldStats::getType));
                                 conflicts.put(entry.getKey(),
                                     "Field [" + entry.getKey() + "] of type [" +
                                         fields[0].getDisplayType() +
@@ -131,10 +144,10 @@ public class TransportFieldStatsAction extends
 
             // Check the field with conflicts and remove them.
             for (String conflictKey : conflicts.keySet()) {
-                Iterator<Map.Entry<String, Map<String, FieldStats>>> iterator =
+                Iterator<Map.Entry<String, Map<String, FieldStats<?>>>> iterator =
                     indicesMergedFieldStats.entrySet().iterator();
                 while (iterator.hasNext()) {
-                    Map.Entry<String, Map<String, FieldStats>> entry = iterator.next();
+                    Map.Entry<String, Map<String, FieldStats<?>>> entry = iterator.next();
                     if (entry.getValue().containsKey(conflictKey)) {
                         entry.getValue().remove(conflictKey);
                     }
@@ -146,11 +159,11 @@ public class TransportFieldStatsAction extends
         if (request.getIndexConstraints().length != 0) {
             Set<String> fieldStatFields = new HashSet<>(Arrays.asList(request.getFields()));
             for (IndexConstraint indexConstraint : request.getIndexConstraints()) {
-                Iterator<Map.Entry<String, Map<String, FieldStats>>> iterator =
+                Iterator<Map.Entry<String, Map<String, FieldStats<?>>>> iterator =
                     indicesMergedFieldStats.entrySet().iterator();
                 while (iterator.hasNext()) {
-                    Map.Entry<String, Map<String, FieldStats>> entry = iterator.next();
-                    FieldStats indexConstraintFieldStats = entry.getValue().get(indexConstraint.getField());
+                    Map.Entry<String, Map<String, FieldStats<?>>> entry = iterator.next();
+                    FieldStats<?> indexConstraintFieldStats = entry.getValue().get(indexConstraint.getField());
                     if (indexConstraintFieldStats != null && indexConstraintFieldStats.match(indexConstraint)) {
                         // If the field stats didn't occur in the list of fields in the original request
                         // we need to remove the field stats, because it was never requested and was only needed to
@@ -205,7 +218,7 @@ public class TransportFieldStatsAction extends
         return new FieldStatsShardResponse(shardId, fieldStats);
     }
 
-    private FieldStats getFieldStats(IndexShard shard, Engine.Searcher searcher, String field) throws Exception {
+    private FieldStats<?> getFieldStats(IndexShard shard, Engine.Searcher searcher, String field) throws Exception {
         MappedFieldType fieldType = shard.mapperService().fullName(field);
         DocumentMapper mapper = shard.mapperService().docMappers(false).iterator().next();
         if (fieldType == null) {
@@ -292,7 +305,7 @@ public class TransportFieldStatsAction extends
 
 
     @Override
-    protected GroupShardsIterator shards(ClusterState clusterState, FieldStatsRequest request,
+    protected GroupShardsIterator<ShardIterator> shards(ClusterState clusterState, FieldStatsRequest request,
                                          String[] concreteIndices) {
         return clusterService.operationRouting().searchShards(clusterState, concreteIndices, null, null);
     }
