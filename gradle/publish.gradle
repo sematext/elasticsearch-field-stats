@@ -1,0 +1,6 @@
+ext {
+    name = 'field-stats'
+    scmUrl = 'https://github.com/sematext/elasticsearch-field-stats'
+    scmConnection = 'scm:git:git://github.com/sematext/elasticsearch-field-stats.git'
+    scmDeveloperConnection = 'scm:git:git://github.com/sematext/elasticsearch-field-stats.git'
+}

@@ -2,7 +2,6 @@ language: java
 install: true
 
 jdk:
-  - oraclejdk10
   - oraclejdk11
   - openjdk10
   - openjdk11
@@ -13,4 +12,4 @@ cache:
   - $HOME/.gradle
 
 script:
-  - ./gradlew check --scan -s
+  - ./gradlew check
