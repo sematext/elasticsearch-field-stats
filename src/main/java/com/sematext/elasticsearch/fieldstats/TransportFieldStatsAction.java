@@ -49,7 +49,6 @@ import org.elasticsearch.index.mapper.NumberFieldMapper;
 import org.elasticsearch.index.shard.IndexShard;
 import org.elasticsearch.index.shard.ShardId;
 import org.elasticsearch.indices.IndicesService;
-import org.elasticsearch.tasks.Task;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 
@@ -194,8 +193,8 @@ public class TransportFieldStatsAction extends
         return new FieldStatsShardResponse();
     }
 
-    @Override protected FieldStatsShardResponse shardOperation(FieldStatsShardRequest request, Task task)
-        throws IOException {
+
+    @Override protected FieldStatsShardResponse shardOperation(FieldStatsShardRequest request) throws IOException {
         ShardId shardId = request.shardId();
         Map<String, FieldStats<?>> fieldStats = new HashMap<>();
         IndexService indexServices = indicesService.indexServiceSafe(shardId.getIndex());
@@ -204,7 +203,7 @@ public class TransportFieldStatsAction extends
             // Resolve patterns and deduplicate
             Set<String> fieldNames = new HashSet<>();
             for (String field : request.getFields()) {
-                fieldNames.addAll(shard.mapperService().simpleMatchToFullName(field));
+                fieldNames.addAll(shard.mapperService().simpleMatchToIndexNames(field));
             }
             for (String field : fieldNames) {
                 FieldStats<?> stats = getFieldStats(shard, searcher, field);
