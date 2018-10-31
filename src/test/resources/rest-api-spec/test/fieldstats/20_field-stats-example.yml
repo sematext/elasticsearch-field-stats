@@ -57,5 +57,5 @@
 
   - match: { indices.test1.fields.@timestamp.type: date }
   - match: { indices.test2.fields.@timestamp.type: date }
-  - match: { indices.test1.fields.@timestamp.min_value_as_string: "2017-10-30T01:04:15.000Z" }
-  - match: { indices.test1.fields.@timestamp.max_value_as_string: "2018-10-30T01:04:15.000Z"  }
+  - match: { indices.test1.fields.@timestamp.min_value: 1509325455000 }
+  - match: { indices.test1.fields.@timestamp.max_value: 1540861455000  }

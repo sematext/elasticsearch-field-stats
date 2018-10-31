@@ -3,4 +3,55 @@ ext {
     scmUrl = 'https://github.com/sematext/elasticsearch-field-stats'
     scmConnection = 'scm:git:git://github.com/sematext/elasticsearch-field-stats.git'
     scmDeveloperConnection = 'scm:git:git://github.com/sematext/elasticsearch-field-stats.git'
+    ossrhReleaseUrl='https://oss.sonatype.org/service/local/staging/deploy/maven2/'
+    ossrhSnapshotUrl='https://oss.sonatype.org/content/repositories/snapshots/'
+}
+
+task sonatypeUpload(type: Upload) {
+    configuration = configurations.archives
+    uploadDescriptor = true
+    repositories {
+        if (project.hasProperty('ossrhUsername')) {
+            mavenDeployer {
+                beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+                repository(url: uri(ossrhReleaseUrl)) {
+                    authentication(userName: ossrhUsername, password: ossrhPassword)
+                }
+                snapshotRepository(url: uri(ossrhSnapshotUrl)) {
+                    authentication(userName: ossrhUsername, password: ossrhPassword)
+                }
+                pom.project {
+                    groupId project.group
+                    artifactId project.name
+                    version project.version
+                    name project.name
+                    description 'Elasticsearch field stats plugin'
+                    packaging 'jar'
+                    url scmUrl
+                    organization {
+                        name 'Sematext Group'
+                        url 'http://sematext.com'
+                    }
+                    scm {
+                        url scmUrl
+                        connection scmConnection
+                        developerConnection scmDeveloperConnection
+                    }
+                    licenses {
+                        license {
+                            name 'Apache License'
+                            url 'https://github.com/sematext/elasticsearch-field-stats/blob/master/LICENSE'
+                        }
+                    }
+                    developers {
+                        developer {
+                            id 'pawel.rog'
+                            name 'Paweł Róg'
+                            email 'pawel.rog@sematext.com'
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
