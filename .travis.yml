@@ -3,7 +3,6 @@ install: true
 
 jdk:
   - oraclejdk11
-  - openjdk10
   - openjdk11
 
 
