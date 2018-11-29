@@ -6,6 +6,8 @@ Elasticsearch functionality that has been removed from Elasticsearch starting
 from version 6.0. It imitates the old functionality and is compatible with the
 old API.
 
+Read more about potential use cases in the blog post [Field Stats for Elasticsearch 6.x](https://sematext.com/blog/field-stats-plugin-elasticsearch/)
+
 Installation
 ------------
 
