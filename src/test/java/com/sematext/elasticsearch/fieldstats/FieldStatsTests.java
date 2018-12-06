@@ -565,6 +565,17 @@ public class FieldStatsTests extends ESSingleNodeTestCase {
     assertEquals(response.getIndicesMergedFieldStats().size(), 1);
   }
 
+  public void testOneEmptyIndex() {
+    createIndex("test1", Settings.EMPTY, "type", "v", "type=date");
+    createIndex("test2", Settings.EMPTY, "type", "v", "type=date");
+    FieldStatsResponse response = prepareFieldStats()
+            .setFields("v")
+            .setLevel("indices")
+            .get();
+    assertEquals(response.getSuccessfulShards(), response.getTotalShards());
+    assertEquals(0, response.getFailedShards());
+    assertEquals(2, response.getIndicesMergedFieldStats().size());
+  }
 
   public void testEmptyIndexNotExistingField() {
     createIndex("test1", Settings.EMPTY, "type", "value", "type=date");

@@ -42,7 +42,6 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.index.IndexService;
 import org.elasticsearch.index.engine.Engine;
 import org.elasticsearch.index.mapper.DateFieldMapper;
-import org.elasticsearch.index.mapper.DocumentMapper;
 import org.elasticsearch.index.mapper.GeoPointFieldMapper;
 import org.elasticsearch.index.mapper.MappedFieldType;
 import org.elasticsearch.index.mapper.NumberFieldMapper;
@@ -220,7 +219,6 @@ public class TransportFieldStatsAction extends
 
     private FieldStats<?> getFieldStats(IndexShard shard, Engine.Searcher searcher, String field) throws Exception {
         MappedFieldType fieldType = shard.mapperService().fullName(field);
-        DocumentMapper mapper = shard.mapperService().docMappers(false).iterator().next();
         if (fieldType == null) {
             return null;
         }
@@ -233,35 +231,34 @@ public class TransportFieldStatsAction extends
             byte[] max = PointValues.getMaxPackedValue(ir, field);
             if (size == 0) {
                 if (numericName == NumberFieldMapper.NumberType.HALF_FLOAT.typeName() ||
-                    numericName == NumberFieldMapper.NumberType.FLOAT.typeName() ||
-                    numericName == NumberFieldMapper.NumberType.DOUBLE.typeName()) {
+                        numericName == NumberFieldMapper.NumberType.FLOAT.typeName() ||
+                        numericName == NumberFieldMapper.NumberType.DOUBLE.typeName()) {
                     return new FieldStats.Double(ir.maxDoc(), 0, -1, -1, fieldType.isSearchable(), fieldType.isAggregatable());
                 }
                 return new FieldStats.Long(ir.maxDoc(), 0, -1, -1, fieldType.isSearchable(), fieldType.isAggregatable());
             }
             if (numericName == NumberFieldMapper.NumberType.LONG.typeName()) {
                 return new FieldStats.Long(ir.maxDoc(), docCount, -1, size,
-                    fieldType.isSearchable(), fieldType.isAggregatable(),
-                    LongPoint.decodeDimension(min, 0), LongPoint.decodeDimension(max, 0));
+                        fieldType.isSearchable(), fieldType.isAggregatable(),
+                        LongPoint.decodeDimension(min, 0), LongPoint.decodeDimension(max, 0));
             } else if (numericName == NumberFieldMapper.NumberType.INTEGER.typeName() ||
-                numericName == NumberFieldMapper.NumberType.BYTE.typeName() ||
-                numericName == NumberFieldMapper.NumberType.SHORT.typeName())
-            {
+                    numericName == NumberFieldMapper.NumberType.BYTE.typeName() ||
+                    numericName == NumberFieldMapper.NumberType.SHORT.typeName()) {
                 return new FieldStats.Long(ir.maxDoc(), docCount, -1, size,
-                    fieldType.isSearchable(), fieldType.isAggregatable(),
-                    IntPoint.decodeDimension(min, 0), IntPoint.decodeDimension(max, 0));
+                        fieldType.isSearchable(), fieldType.isAggregatable(),
+                        IntPoint.decodeDimension(min, 0), IntPoint.decodeDimension(max, 0));
             } else if (numericName == NumberFieldMapper.NumberType.HALF_FLOAT.typeName()) {
                 return new FieldStats.Double(ir.maxDoc(), docCount, -1, size,
-                    fieldType.isSearchable(), fieldType.isAggregatable(),
-                    HalfFloatPoint.decodeDimension(min, 0), HalfFloatPoint.decodeDimension(max, 0));
+                        fieldType.isSearchable(), fieldType.isAggregatable(),
+                        HalfFloatPoint.decodeDimension(min, 0), HalfFloatPoint.decodeDimension(max, 0));
             } else if (numericName == NumberFieldMapper.NumberType.FLOAT.typeName()) {
                 return new FieldStats.Double(ir.maxDoc(), docCount, -1, size,
-                    fieldType.isSearchable(), fieldType.isAggregatable(),
-                    FloatPoint.decodeDimension(min, 0), FloatPoint.decodeDimension(max, 0));
+                        fieldType.isSearchable(), fieldType.isAggregatable(),
+                        FloatPoint.decodeDimension(min, 0), FloatPoint.decodeDimension(max, 0));
             } else if (numericName == NumberFieldMapper.NumberType.DOUBLE.typeName()) {
                 return new FieldStats.Double(ir.maxDoc(), docCount, -1, size,
-                    fieldType.isSearchable(), fieldType.isAggregatable(),
-                    DoublePoint.decodeDimension(min, 0), DoublePoint.decodeDimension(max, 0));
+                        fieldType.isSearchable(), fieldType.isAggregatable(),
+                        DoublePoint.decodeDimension(min, 0), DoublePoint.decodeDimension(max, 0));
             }
         }
 
@@ -274,11 +271,10 @@ public class TransportFieldStatsAction extends
             byte[] min = PointValues.getMinPackedValue(ir, field);
             byte[] max = PointValues.getMaxPackedValue(ir, field);
             return new FieldStats.Date(ir.maxDoc(), docCount, -1, size,
-                fieldType.isSearchable(), fieldType.isAggregatable(),
-                ((DateFieldMapper.DateFieldType)fieldType).dateTimeFormatter(),
-                LongPoint.decodeDimension(min, 0), LongPoint.decodeDimension(max, 0));
+                    fieldType.isSearchable(), fieldType.isAggregatable(),
+                    ((DateFieldMapper.DateFieldType) fieldType).dateTimeFormatter(),
+                    LongPoint.decodeDimension(min, 0), LongPoint.decodeDimension(max, 0));
         }
-
 
         if (fieldType instanceof GeoPointFieldMapper.GeoPointFieldType) {
             final long size = PointValues.size(ir, field);
@@ -288,10 +284,12 @@ public class TransportFieldStatsAction extends
             final int docCount = PointValues.getDocCount(ir, field);
             byte[] min = PointValues.getMinPackedValue(ir, field);
             byte[] max = PointValues.getMaxPackedValue(ir, field);
-            GeoPoint minPt = new GeoPoint(GeoEncodingUtils.decodeLatitude(min, 0), GeoEncodingUtils.decodeLongitude(min, Integer.BYTES));
-            GeoPoint maxPt = new GeoPoint(GeoEncodingUtils.decodeLatitude(max, 0), GeoEncodingUtils.decodeLongitude(max, Integer.BYTES));
+            GeoPoint minPt = new GeoPoint(GeoEncodingUtils.decodeLatitude(min, 0),
+                    GeoEncodingUtils.decodeLongitude(min, Integer.BYTES));
+            GeoPoint maxPt = new GeoPoint(GeoEncodingUtils.decodeLatitude(max, 0),
+                    GeoEncodingUtils.decodeLongitude(max, Integer.BYTES));
             return new FieldStats.GeoPoint(ir.maxDoc(), docCount, -1L, size, fieldType.isSearchable(), fieldType.isAggregatable(),
-                minPt, maxPt);
+                    minPt, maxPt);
 
         }
 
@@ -299,8 +297,9 @@ public class TransportFieldStatsAction extends
         if (terms == null) {
             return new FieldStats.Text(ir.maxDoc(), 0, 0, 0, fieldType.isSearchable(), fieldType.isAggregatable());
         }
+
         return new FieldStats.Text(ir.maxDoc(), terms.getDocCount(), terms.getSumDocFreq(), terms.getSumTotalTermFreq(),
-            fieldType.isSearchable(), fieldType.isAggregatable(), terms.getMin(), terms.getMax());
+                fieldType.isSearchable(), fieldType.isAggregatable(), terms.getMin(), terms.getMax());
     }
 
 
