@@ -13,27 +13,13 @@
  */
 package com.sematext.elasticsearch.fieldstats;
 
-
-import org.elasticsearch.action.Action;
-import org.elasticsearch.client.ElasticsearchClient;
+import org.elasticsearch.action.ActionType;
 
 
-public class FieldStatsAction extends Action<FieldStatsRequest, FieldStatsResponse, FieldStatsRequestBuilder> {
+public class FieldStatsAction extends ActionType<FieldStatsResponse> {
 
     public static final FieldStatsAction INSTANCE = new FieldStatsAction();
     public static final String NAME = "indices:data/read/field_stats";
 
-    private FieldStatsAction() {
-        super(NAME);
-    }
-
-    @Override
-    public FieldStatsResponse newResponse() {
-        return new FieldStatsResponse();
-    }
-
-    @Override
-    public FieldStatsRequestBuilder newRequestBuilder(ElasticsearchClient client) {
-        return new FieldStatsRequestBuilder(client, this);
-    }
+    private FieldStatsAction() { super(NAME, FieldStatsResponse::new); }
 }

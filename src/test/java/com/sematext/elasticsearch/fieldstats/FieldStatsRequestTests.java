@@ -99,8 +99,7 @@ public class FieldStatsRequestTests extends ESTestCase {
             response.writeTo(output);
             output.flush();
             StreamInput input = output.bytes().streamInput();
-            FieldStatsShardResponse deserialized = new FieldStatsShardResponse();
-            deserialized.readFrom(input);
+            FieldStatsShardResponse deserialized = new FieldStatsShardResponse(input);
             final Map<String, FieldStats<?>> expected;
             expected = deserialized.getFieldStats();
             assertEquals(expected.size(), deserialized.getFieldStats().size());

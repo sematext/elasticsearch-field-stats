@@ -37,6 +37,8 @@ import org.joda.time.DateTimeZone;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
@@ -394,10 +396,10 @@ public class FieldStatsTests extends ESSingleNodeTestCase {
   }
 
   public void testDateFiltering() {
-    DateTime dateTime1 = new DateTime(2014, 1, 1, 0, 0, 0, 0, DateTimeZone.UTC);
-    String dateTime1Str = DateFieldMapper.DEFAULT_DATE_TIME_FORMATTER.parser().print(dateTime1);
-    DateTime dateTime2 = new DateTime(2014, 1, 2, 0, 0, 0, 0, DateTimeZone.UTC);
-    String dateTime2Str = DateFieldMapper.DEFAULT_DATE_TIME_FORMATTER.parser().print(dateTime2);
+    ZonedDateTime dateTime1 = ZonedDateTime.of(2014, 1, 1, 0, 0, 0, 0, ZoneId.of("UTC"));
+    String dateTime1Str = DateFieldMapper.DEFAULT_DATE_TIME_FORMATTER.format(dateTime1);
+    ZonedDateTime dateTime2 = ZonedDateTime.of(2014, 1, 2, 0, 0, 0, 0, ZoneId.of("UTC"));
+    String dateTime2Str = DateFieldMapper.DEFAULT_DATE_TIME_FORMATTER.format(dateTime2);
 
     createIndex("test1", Settings.EMPTY, "test", "value", "type=date", "value2", "type=date,index=false");
     client().prepareIndex("test1", "test")
@@ -412,9 +414,9 @@ public class FieldStatsTests extends ESSingleNodeTestCase {
         .get();
     assertEquals(response.getIndicesMergedFieldStats().size(), 2);
     assertEquals(response.getIndicesMergedFieldStats().get("test1").get("value").getMinValue(),
-        dateTime1.getMillis());
+        dateTime1.toInstant().toEpochMilli());
     assertEquals(response.getIndicesMergedFieldStats().get("test2").get("value").getMinValue(),
-        dateTime2.getMillis());
+        dateTime2.toInstant().toEpochMilli());
     assertEquals(response.getIndicesMergedFieldStats().get("test1").get("value").getMinValueAsString(),
         dateTime1Str);
     assertEquals(response.getIndicesMergedFieldStats().get("test2").get("value").getMinValueAsString(),
@@ -438,7 +440,7 @@ public class FieldStatsTests extends ESSingleNodeTestCase {
         .get();
     assertEquals(response.getIndicesMergedFieldStats().size(), 1);
     assertEquals(response.getIndicesMergedFieldStats().get("test1").get("value").getMinValue(),
-        dateTime1.getMillis());
+        dateTime1.toInstant().toEpochMilli());
     assertEquals(response.getIndicesMergedFieldStats().get("test1").get("value").getMinValueAsString(),
         dateTime1Str);
     assertEquals(response.getIndicesMergedFieldStats().get("test1").get("value").getDisplayType(),
@@ -452,7 +454,7 @@ public class FieldStatsTests extends ESSingleNodeTestCase {
         .get();
     assertEquals(response.getIndicesMergedFieldStats().size(), 1);
     assertEquals(response.getIndicesMergedFieldStats().get("test2").get("value").getMinValue(),
-        dateTime2.getMillis());
+        dateTime2.toInstant().toEpochMilli());
     assertEquals(response.getIndicesMergedFieldStats().get("test2").get("value").getMinValueAsString(),
         dateTime2Str);
 
@@ -472,7 +474,7 @@ public class FieldStatsTests extends ESSingleNodeTestCase {
         .get();
     assertEquals(response.getIndicesMergedFieldStats().size(), 1);
     assertEquals(response.getIndicesMergedFieldStats().get("test2").get("value").getMinValue(),
-        dateTime2.getMillis());
+        dateTime2.toInstant().toEpochMilli());
     assertEquals(response.getIndicesMergedFieldStats().get("test2").get("value").getMinValueAsString(),
         dateTime2Str);
     assertEquals(response.getIndicesMergedFieldStats().get("test2").get("value").getDisplayType(),
@@ -485,9 +487,9 @@ public class FieldStatsTests extends ESSingleNodeTestCase {
         .get();
     assertEquals(response.getIndicesMergedFieldStats().size(), 2);
     assertEquals(response.getIndicesMergedFieldStats().get("test1").get("value").getMinValue(),
-        dateTime1.getMillis());
+        dateTime1.toInstant().toEpochMilli());
     assertEquals(response.getIndicesMergedFieldStats().get("test2").get("value").getMinValue(),
-        dateTime2.getMillis());
+        dateTime2.toInstant().toEpochMilli());
     assertEquals(response.getIndicesMergedFieldStats().get("test1").get("value").getMinValueAsString(),
         dateTime1Str);
     assertEquals(response.getIndicesMergedFieldStats().get("test2").get("value").getMinValueAsString(),
@@ -502,9 +504,9 @@ public class FieldStatsTests extends ESSingleNodeTestCase {
         .get();
     assertEquals(response.getIndicesMergedFieldStats().size(), 2);
     assertEquals(response.getIndicesMergedFieldStats().get("test1").get("value").getMinValue(),
-        dateTime1.getMillis());
+        dateTime1.toInstant().toEpochMilli());
     assertEquals(response.getIndicesMergedFieldStats().get("test2").get("value").getMinValue(),
-        dateTime2.getMillis());
+        dateTime2.toInstant().toEpochMilli());
     assertEquals(response.getIndicesMergedFieldStats().get("test1").get("value").getMinValueAsString(),
         dateTime1Str);
     assertEquals(response.getIndicesMergedFieldStats().get("test2").get("value").getMinValueAsString(),

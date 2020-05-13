@@ -20,7 +20,7 @@ import org.apache.lucene.document.IntPoint;
 import org.apache.lucene.document.LongPoint;
 import org.apache.lucene.geo.GeoEncodingUtils;
 import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.index.MultiFields;
+import org.apache.lucene.index.MultiTerms;
 import org.apache.lucene.index.PointValues;
 import org.apache.lucene.index.Terms;
 import org.elasticsearch.ExceptionsHelper;
@@ -38,6 +38,7 @@ import org.elasticsearch.cluster.routing.ShardRouting;
 import org.elasticsearch.cluster.service.ClusterService;
 import org.elasticsearch.common.geo.GeoPoint;
 import org.elasticsearch.common.inject.Inject;
+import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.index.IndexService;
 import org.elasticsearch.index.engine.Engine;
@@ -74,7 +75,7 @@ public class TransportFieldStatsAction extends
                                               TransportService transportService, ActionFilters actionFilters,
                                               IndexNameExpressionResolver indexNameExpressionResolver,
                                               IndicesService indicesService) {
-        super(settings, FieldStatsAction.NAME, threadPool, clusterService, transportService,
+        super(FieldStatsAction.NAME, clusterService, transportService,
             actionFilters, indexNameExpressionResolver, FieldStatsRequest::new,
             FieldStatsShardRequest::new, ThreadPool.Names.MANAGEMENT);
         this.indicesService = indicesService;
@@ -188,9 +189,8 @@ public class TransportFieldStatsAction extends
         return new FieldStatsShardRequest(shard.shardId(), request);
     }
 
-    @Override
-    protected FieldStatsShardResponse newShardResponse() {
-        return new FieldStatsShardResponse();
+    @Override protected FieldStatsShardResponse readShardResponse(StreamInput in) throws IOException {
+        return null;
     }
 
     @Override protected FieldStatsShardResponse shardOperation(FieldStatsShardRequest request, Task task)
@@ -218,11 +218,11 @@ public class TransportFieldStatsAction extends
     }
 
     private FieldStats<?> getFieldStats(IndexShard shard, Engine.Searcher searcher, String field) throws Exception {
-        MappedFieldType fieldType = shard.mapperService().fullName(field);
+        MappedFieldType fieldType = shard.mapperService().fieldType(field);
         if (fieldType == null) {
             return null;
         }
-        IndexReader ir = searcher.reader();
+        IndexReader ir = searcher.getIndexReader();
         if (fieldType instanceof NumberFieldMapper.NumberFieldType) {
             String numericName = fieldType.typeName();
             long size = PointValues.size(ir, field);
@@ -270,10 +270,16 @@ public class TransportFieldStatsAction extends
             int docCount = PointValues.getDocCount(ir, field);
             byte[] min = PointValues.getMinPackedValue(ir, field);
             byte[] max = PointValues.getMaxPackedValue(ir, field);
-            return new FieldStats.Date(ir.maxDoc(), docCount, -1, size,
-                    fieldType.isSearchable(), fieldType.isAggregatable(),
-                    ((DateFieldMapper.DateFieldType) fieldType).dateTimeFormatter(),
-                    LongPoint.decodeDimension(min, 0), LongPoint.decodeDimension(max, 0));
+            return new FieldStats.Date(ir.maxDoc(),
+                docCount,
+                -1,
+                size,
+                fieldType.isSearchable(),
+                fieldType.isAggregatable(),
+                ((DateFieldMapper.DateFieldType) fieldType).dateTimeFormatter(),
+                LongPoint.decodeDimension(min, 0),
+                LongPoint.decodeDimension(max, 0)
+            );
         }
 
         if (fieldType instanceof GeoPointFieldMapper.GeoPointFieldType) {
@@ -293,7 +299,7 @@ public class TransportFieldStatsAction extends
 
         }
 
-        Terms terms = MultiFields.getTerms(ir, field);
+        Terms terms = MultiTerms.getTerms(ir, field);
         if (terms == null) {
             return new FieldStats.Text(ir.maxDoc(), 0, 0, 0, fieldType.isSearchable(), fieldType.isAggregatable());
         }

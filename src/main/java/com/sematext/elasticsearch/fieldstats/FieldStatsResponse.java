@@ -18,6 +18,7 @@ import org.elasticsearch.action.support.broadcast.BroadcastResponse;
 import org.elasticsearch.common.Nullable;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
+import org.elasticsearch.common.xcontent.XContentBuilder;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -26,8 +27,8 @@ import java.util.Map;
 
 
 public class FieldStatsResponse extends BroadcastResponse {
-    private Map<String, Map<String, FieldStats<?>>> indicesMergedFieldStats;
-    private Map<String, String> conflicts;
+    private Map<String, Map<String, FieldStats<?>>> indicesMergedFieldStats = new HashMap<>();
+    private Map<String, String> conflicts = new HashMap<>();
 
     public FieldStatsResponse() {
     }
@@ -41,22 +42,8 @@ public class FieldStatsResponse extends BroadcastResponse {
         this.conflicts = conflicts;
     }
 
-    @Nullable
-    public Map<String, FieldStats<?>> getAllFieldStats() {
-        return indicesMergedFieldStats.get("_all");
-    }
-
-    public Map<String, String> getConflicts() {
-        return conflicts;
-    }
-
-    public Map<String, Map<String, FieldStats<?>>> getIndicesMergedFieldStats() {
-        return indicesMergedFieldStats;
-    }
-
-    @Override
-    public void readFrom(StreamInput in) throws IOException {
-        super.readFrom(in);
+    public FieldStatsResponse(StreamInput in) throws IOException {
+        super(in);
         int size = in.readVInt();
         indicesMergedFieldStats = new HashMap<>(size);
         for (int i = 0; i < size; i++) {
@@ -79,6 +66,26 @@ public class FieldStatsResponse extends BroadcastResponse {
         }
 
     }
+
+    @Nullable
+    public Map<String, FieldStats<?>> getAllFieldStats() {
+        return indicesMergedFieldStats.get("_all");
+    }
+
+    public Map<String, String> getConflicts() {
+        return conflicts;
+    }
+
+    public Map<String, Map<String, FieldStats<?>>> getIndicesMergedFieldStats() {
+        return indicesMergedFieldStats;
+    }
+
+    @Override
+    protected void addCustomXContentFields(XContentBuilder builder, Params params) throws IOException {
+        builder.startObject("upgraded_indices");
+        builder.endObject();
+    }
+
 
     @Override
     public void writeTo(StreamOutput out) throws IOException {
