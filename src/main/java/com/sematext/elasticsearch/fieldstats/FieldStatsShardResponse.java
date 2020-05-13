@@ -28,7 +28,15 @@ public class FieldStatsShardResponse extends BroadcastShardResponse {
 
     private Map<String, FieldStats<?>> fieldStats;
 
-    public FieldStatsShardResponse() {
+    public FieldStatsShardResponse(StreamInput in) throws IOException {
+        super(in);
+        final int size = in.readVInt();
+        fieldStats = new HashMap<>(size);
+        for (int i = 0; i < size; i++) {
+            String key = in.readString();
+            FieldStats<?> value = FieldStats.readFrom(in);
+            fieldStats.put(key, value);
+        }
     }
 
     public FieldStatsShardResponse(ShardId shardId, Map<String, FieldStats<?>> fieldStats) {
@@ -44,18 +52,6 @@ public class FieldStatsShardResponse extends BroadcastShardResponse {
         return fieldStats.entrySet().stream()
             .filter((e) -> e.getValue().hasMinMax())
             .collect(Collectors.toMap(p -> p.getKey(), p -> p.getValue()));
-    }
-
-    @Override
-    public void readFrom(StreamInput in) throws IOException {
-        super.readFrom(in);
-        final int size = in.readVInt();
-        fieldStats = new HashMap<>(size);
-        for (int i = 0; i < size; i++) {
-            String key = in.readString();
-            FieldStats<?> value = FieldStats.readFrom(in);
-            fieldStats.put(key, value);
-        }
     }
 
     @Override

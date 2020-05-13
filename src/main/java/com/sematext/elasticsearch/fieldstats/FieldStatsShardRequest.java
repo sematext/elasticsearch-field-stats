@@ -43,19 +43,18 @@ public class FieldStatsShardRequest extends BroadcastShardRequest {
         useCache = request.shouldUseCache();
     }
 
+    public FieldStatsShardRequest(StreamInput in) throws IOException {
+        super(in);
+        fields = in.readStringArray();
+        useCache = in.readBoolean();
+    }
+
     public String[] getFields() {
         return fields;
     }
 
     public boolean shouldUseCache() {
         return useCache;
-    }
-
-    @Override
-    public void readFrom(StreamInput in) throws IOException {
-        super.readFrom(in);
-        fields = in.readStringArray();
-        useCache = in.readBoolean();
     }
 
     @Override

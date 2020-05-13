@@ -16,6 +16,7 @@ package com.sematext.elasticsearch.fieldstats;
 
 import org.elasticsearch.action.ActionRequestValidationException;
 import org.elasticsearch.action.ValidateActions;
+import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.action.support.broadcast.BroadcastRequest;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.io.stream.StreamInput;
@@ -29,13 +30,32 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class FieldStatsRequest extends BroadcastRequest<FieldStatsRequest> {
-
     public static final String DEFAULT_LEVEL = "cluster";
 
     private String[] fields = Strings.EMPTY_ARRAY;
     private String level = DEFAULT_LEVEL;
     private IndexConstraint[] indexConstraints = new IndexConstraint[0];
     private boolean useCache = true;
+
+    public FieldStatsRequest(String... indices) {
+        super(indices);
+    }
+
+    public FieldStatsRequest(StreamInput in) throws IOException {
+        super(in);
+        fields = in.readStringArray();
+        int size = in.readVInt();
+        indexConstraints = new IndexConstraint[size];
+        for (int i = 0; i < size; i++) {
+            indexConstraints[i] = new IndexConstraint(in);
+        }
+        level = in.readString();
+        useCache = in.readBoolean();
+    }
+
+    public FieldStatsRequest(String[] indices, IndicesOptions indicesOptions) {
+        super(indices, indicesOptions);
+    }
 
     public String[] getFields() {
         return fields;
@@ -171,19 +191,6 @@ public class FieldStatsRequest extends BroadcastRequest<FieldStatsRequest> {
             validationException = ValidateActions.addValidationError("no fields specified", validationException);
         }
         return validationException;
-    }
-
-    @Override
-    public void readFrom(StreamInput in) throws IOException {
-        super.readFrom(in);
-        fields = in.readStringArray();
-        int size = in.readVInt();
-        indexConstraints = new IndexConstraint[size];
-        for (int i = 0; i < size; i++) {
-            indexConstraints[i] = new IndexConstraint(in);
-        }
-        level = in.readString();
-        useCache = in.readBoolean();
     }
 
     @Override

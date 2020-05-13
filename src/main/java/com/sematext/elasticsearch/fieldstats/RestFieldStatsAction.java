@@ -36,7 +36,6 @@ import java.util.Map;
 
 public class RestFieldStatsAction extends BaseRestHandler {
   public RestFieldStatsAction(Settings settings, RestController controller) {
-    super(settings);
     controller.registerHandler(GET, "/_field_stats", this);
     controller.registerHandler(POST, "/_field_stats", this);
     controller.registerHandler(GET, "/{index}/_field_stats", this);

@@ -12,9 +12,6 @@ buildscript {
     }
 }
 
-configurations {
-    archives
-}
 
 apply plugin: 'java'
 apply plugin: 'maven'
@@ -22,37 +19,49 @@ apply plugin: 'idea'
 apply plugin: 'elasticsearch.esplugin'
 
 apply plugin: 'signing'
-apply plugin: 'maven-publish'
+apply plugin: 'nebula.maven-base-publish'
 
 apply from: 'gradle/ext.gradle'
 apply from: 'gradle/publish.gradle'
 
-sourceCompatibility = JavaVersion.VERSION_1_8
-targetCompatibility = JavaVersion.VERSION_1_8
+
+configurations {
+    archives
+}
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+ext {
+    projectSubstitutions = [:]
+    licenseFile = rootProject.file('./LICENSE')
+    noticeFile = rootProject.file('README.md')
+}
+
+
+sourceCompatibility = JavaVersion.VERSION_11
+targetCompatibility = JavaVersion.VERSION_11
 
 
 esplugin {
     name 'field-stats'
     description 'Field stats plugin for Elasticsearch'
     classname 'com.sematext.elasticsearch.plugin.FieldStatsPlugin'
-}
-
-integTestCluster {
-    numNodes = 2
+    licenseFile = rootProject.file('LICENSE')
+    noticeFile = rootProject.file('README.md')
 }
 
 artifacts {
     archives javadocJar, sourcesJar
 }
 
-
-signing {
-    sign configurations.archives
-}
+//signing {
+//    sign configurations.archives
+//}
 
 checkstyleTest.enabled = false
-dependencyLicenses.enabled = false
+dependencyLicenses.enabled = true
 thirdPartyAudit.enabled = false
-licenseFile = rootProject.file('./LICENSE')
-noticeFile = rootProject.file('README.md')
-
+loggerUsageCheck.enabled = false

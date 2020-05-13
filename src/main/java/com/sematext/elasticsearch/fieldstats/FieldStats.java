@@ -13,7 +13,6 @@
  */
 package com.sematext.elasticsearch.fieldstats;
 
-
 import org.apache.lucene.document.InetAddressPoint;
 import org.apache.lucene.index.TermsEnum;
 import org.apache.lucene.util.BytesRef;
@@ -21,10 +20,11 @@ import org.apache.lucene.util.StringHelper;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
 import org.elasticsearch.common.io.stream.Writeable;
-import org.elasticsearch.common.joda.FormatDateTimeFormatter;
 import org.elasticsearch.common.joda.Joda;
+import org.elasticsearch.common.joda.JodaDateFormatter;
 import org.elasticsearch.common.network.InetAddresses;
 import org.elasticsearch.common.network.NetworkAddress;
+import org.elasticsearch.common.time.DateFormatter;
 import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 
@@ -478,7 +478,7 @@ public abstract class FieldStats<T> implements Writeable, ToXContent {
     }
 
     public static class Date extends FieldStats<java.lang.Long> {
-        private FormatDateTimeFormatter formatter;
+        private DateFormatter formatter;
 
         public Date(long maxDoc, long docCount, long sumDocFreq, long sumTotalTermFreq,
                     boolean isSearchable, boolean isAggregatable) {
@@ -488,7 +488,7 @@ public abstract class FieldStats<T> implements Writeable, ToXContent {
 
         public Date(long maxDoc, long docCount, long sumDocFreq, long sumTotalTermFreq,
                     boolean isSearchable, boolean isAggregatable,
-                    FormatDateTimeFormatter formatter,
+                    DateFormatter formatter,
                     long minValue, long maxValue) {
             super((byte) 2, maxDoc, docCount, sumDocFreq, sumTotalTermFreq, isSearchable, isAggregatable,
                 minValue, maxValue);
@@ -502,18 +502,18 @@ public abstract class FieldStats<T> implements Writeable, ToXContent {
 
         @Override
         public void writeMinMax(StreamOutput out) throws IOException {
-            out.writeString(formatter.format());
+            out.writeString(formatter.pattern());
             out.writeLong(minValue);
             out.writeLong(maxValue);
         }
 
         @Override
         public java.lang.Long valueOf(String value, String fmt) {
-            FormatDateTimeFormatter f = formatter;
+            DateFormatter f = formatter;
             if (fmt != null) {
                 f = Joda.forPattern(fmt);
             }
-            return f.parser().parseDateTime(value).getMillis();
+            return f.parseJoda(value).getMillis();
         }
 
         @Override
@@ -521,7 +521,7 @@ public abstract class FieldStats<T> implements Writeable, ToXContent {
             if(formatter == null) {
                 return minValue.toString();
             }
-            return formatter.printer().print(minValue);
+            return formatter.formatMillis(minValue);
         }
 
         @Override
@@ -529,21 +529,21 @@ public abstract class FieldStats<T> implements Writeable, ToXContent {
             if(formatter == null) {
                 return maxValue.toString();
             }
-            return formatter.printer().print(maxValue);
+            return formatter.formatMillis(maxValue);
         }
 
         @Override
         public boolean equals(Object o) {
             if (!super.equals(o)) return false;
             Date that = (Date) o;
-            return Objects.equals(formatter == null ? null : formatter.format(),
-                that.formatter == null ? null : that.formatter.format());
+            return Objects.equals(formatter == null ? null : formatter.pattern(),
+                that.formatter == null ? null : that.formatter.pattern());
         }
 
         @Override
         public int hashCode() {
             int result = super.hashCode();
-            result = 31 * result + (formatter == null ? 0 : formatter.format().hashCode());
+            result = 31 * result + (formatter == null ? 0 : formatter.pattern().hashCode());
             return result;
         }
     }
@@ -619,7 +619,7 @@ public abstract class FieldStats<T> implements Writeable, ToXContent {
         public int compare(InetAddress o1, InetAddress o2) {
             byte[] b1 = InetAddressPoint.encode(o1);
             byte[] b2 = InetAddressPoint.encode(o2);
-            return StringHelper.compare(b1.length, b1, 0, b2, 0);
+            return StringHelper.bytesDifference(new BytesRef(b1), new BytesRef(b2));
         }
 
         @Override
@@ -665,7 +665,7 @@ public abstract class FieldStats<T> implements Writeable, ToXContent {
 
         @Override
         public org.elasticsearch.common.geo.GeoPoint valueOf(String value, String fmt) {
-            return org.elasticsearch.common.geo.GeoPoint.parseFromLatLon(value);
+            return org.elasticsearch.common.geo.GeoPoint.fromGeohash(value);
         }
 
         @Override
@@ -727,7 +727,7 @@ public abstract class FieldStats<T> implements Writeable, ToXContent {
                 }
             case 2:
                 if (hasMinMax) {
-                    FormatDateTimeFormatter formatter = Joda.forPattern(in.readString());
+                    JodaDateFormatter formatter = Joda.forPattern(in.readString());
                     return new Date(maxDoc, docCount, sumDocFreq, sumTotalTermFreq,
                         isSearchable, isAggregatable, formatter, in.readLong(), in.readLong());
                 } else {
