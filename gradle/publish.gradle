@@ -30,7 +30,7 @@ task sonatypeUpload(type: Upload) {
                     url scmUrl
                     organization {
                         name 'Sematext Group'
-                        url 'http://sematext.com'
+                        url 'https://sematext.com'
                     }
                     scm {
                         url scmUrl
@@ -45,9 +45,9 @@ task sonatypeUpload(type: Upload) {
                     }
                     developers {
                         developer {
-                            id 'pawel.rog'
-                            name 'Paweł Róg'
-                            email 'pawel.rog@sematext.com'
+                            id 'gr0'
+                            name 'Rafał Kuć'
+                            email 'rafal.kuc@sematext.com'
                         }
                     }
                 }
