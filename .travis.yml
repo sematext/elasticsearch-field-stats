@@ -2,9 +2,7 @@ language: java
 install: true
 
 jdk:
-  - oraclejdk11
-  - openjdk11
-
+  - openjdk13
 
 cache:
   directories:
